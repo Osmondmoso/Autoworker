@@ -1,0 +1,6 @@
+{
+  "name": "Steel Agent Studio - Autonomous Live Browser Agent",
+  "description": "Autonomous browser AI agent powered by Steel and Gemini. Watch real-time execution in interactive cloud browser sessions with live DOM observation, step-by-step reasoning, and visual logs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
