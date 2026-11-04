@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { steelClient } from './server/steel.ts';
 import { agentManager } from './server/agent.ts';
 import { skillsRegistry } from './server/skills/registry.ts';
+import { getNvidiaApiKey, setNvidiaApiKey } from './server/llm.ts';
 
 dotenv.config();
 
@@ -19,6 +20,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health and Status Check
 app.get('/api/health', async (_req, res) => {
+  const nvKey = getNvidiaApiKey();
+  const maskedNvKey = nvKey ? (nvKey.slice(0, 6) + '...' + nvKey.slice(-4)) : '';
   try {
     const sessions = await steelClient.listSessions();
     res.json({
@@ -26,6 +29,9 @@ app.get('/api/health', async (_req, res) => {
       steelConnected: true,
       sessionsCount: Array.isArray(sessions) ? sessions.length : (sessions?.sessions?.length || 0),
       geminiKeyConfigured: !!process.env.GEMINI_API_KEY,
+      nvidiaKeyConfigured: !!nvKey,
+      nvidiaModel: 'nvidia/nemotron-3-ultra-550b-a55b',
+      maskedNvidiaKey: maskedNvKey,
       steelKeyConfigured: !!steelClient.getApiKey(),
       maskedKey: steelClient.getApiKey().slice(0, 7) + '...' + steelClient.getApiKey().slice(-4),
     });
@@ -35,6 +41,9 @@ app.get('/api/health', async (_req, res) => {
       steelConnected: false,
       error: err.message,
       geminiKeyConfigured: !!process.env.GEMINI_API_KEY,
+      nvidiaKeyConfigured: !!nvKey,
+      nvidiaModel: 'nvidia/nemotron-3-ultra-550b-a55b',
+      maskedNvidiaKey: maskedNvKey,
       steelKeyConfigured: !!steelClient.getApiKey(),
     });
   }
@@ -50,6 +59,19 @@ app.post('/api/config/key', (req, res) => {
   res.json({
     success: true,
     maskedKey: apiKey.slice(0, 7) + '...' + apiKey.slice(-4),
+  });
+});
+
+// Update NVIDIA API Key
+app.post('/api/config/nvidia-key', (req, res) => {
+  const { apiKey } = req.body;
+  if (!apiKey || typeof apiKey !== 'string') {
+    return res.status(400).json({ error: 'API key is required' });
+  }
+  setNvidiaApiKey(apiKey.trim());
+  res.json({
+    success: true,
+    maskedKey: apiKey.slice(0, 6) + '...' + apiKey.slice(-4),
   });
 });
 

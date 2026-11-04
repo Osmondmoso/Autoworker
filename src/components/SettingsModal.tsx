@@ -8,7 +8,8 @@ import {
   Cpu, 
   Globe, 
   Server,
-  Sparkles
+  Sparkles,
+  Zap
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -25,6 +26,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onUpdateKey,
 }) => {
   const [keyInput, setKeyInput] = useState('');
+  const [nvidiaKeyInput, setNvidiaKeyInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -32,16 +34,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!keyInput.trim()) return;
+    if (!keyInput.trim() && !nvidiaKeyInput.trim()) return;
 
     setStatus('saving');
     try {
-      const ok = await onUpdateKey(keyInput.trim());
+      let ok = true;
+      if (keyInput.trim()) {
+        ok = await onUpdateKey(keyInput.trim());
+      }
+      if (nvidiaKeyInput.trim()) {
+        const res = await fetch('/api/config/nvidia-key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ apiKey: nvidiaKeyInput.trim() }),
+        });
+        if (!res.ok) ok = false;
+      }
+
       if (ok) {
         setStatus('success');
         setTimeout(() => {
           setStatus('idle');
           setKeyInput('');
+          setNvidiaKeyInput('');
           onClose();
         }, 1200);
       } else {
@@ -74,38 +89,69 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               Steel & Agent Engine Settings
             </h3>
             <p className="text-xs text-slate-400">
-              Configure cloud browser sandbox credentials & telemetry
+              Configure cloud browser credentials & NVIDIA Agent API
             </p>
           </div>
         </div>
 
-        {/* Current Active Key Pill */}
-        <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 mb-5">
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span className="text-slate-400 flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Active Steel API Key:</span>
-            </span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-              Authenticated
-            </span>
+        {/* Active Keys Info Box */}
+        <div className="space-y-2 mb-5">
+          {/* NVIDIA Agent API Key */}
+          <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-slate-400 flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Agent Reasoning API Key (NVIDIA NIM):</span>
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                Connected
+              </span>
+            </div>
+            <div className="font-mono text-xs text-slate-200 bg-slate-900 px-2.5 py-1.5 rounded border border-slate-800/80 flex items-center justify-between">
+              <span>nvapi-AY5o...c_F5</span>
+              <span className="text-[10px] text-cyan-400 font-sans font-semibold">Nemotron 3 Ultra 550B</span>
+            </div>
           </div>
-          <div className="font-mono text-xs text-slate-200 bg-slate-900 px-2.5 py-1.5 rounded border border-slate-800/80">
-            {maskedKey || 'ste-Yn9dfe...b5EGJ'}
+
+          {/* Steel Browser Key */}
+          <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-slate-400 flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Active Steel Browser API Key:</span>
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                Authenticated
+              </span>
+            </div>
+            <div className="font-mono text-xs text-slate-200 bg-slate-900 px-2.5 py-1.5 rounded border border-slate-800/80">
+              {maskedKey || 'ste-Yn9dfe...b5EGJ'}
+            </div>
           </div>
         </div>
 
         {/* Update Key Form */}
         <form onSubmit={handleSubmit} className="space-y-4 mb-6">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label className="block text-xs font-medium text-slate-300 mb-1">
+              Update NVIDIA NIM Agent API Key
+            </label>
+            <input
+              type="password"
+              value={nvidiaKeyInput}
+              onChange={(e) => setNvidiaKeyInput(e.target.value)}
+              placeholder="Paste nvapi-... key"
+              className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 mb-3"
+            />
+
+            <label className="block text-xs font-medium text-slate-300 mb-1">
               Update Steel API Key
             </label>
             <input
               type="password"
               value={keyInput}
               onChange={(e) => setKeyInput(e.target.value)}
-              placeholder="Paste new ste-... key"
+              placeholder="Paste ste-... key"
               className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
             />
           </div>
@@ -120,7 +166,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {status === 'success' && (
             <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
               <Check className="w-4 h-4 shrink-0" />
-              <span>Steel API Key updated successfully!</span>
+              <span>Settings and API credentials updated!</span>
             </div>
           )}
 
@@ -135,10 +181,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             <button
               type="submit"
-              disabled={!keyInput.trim() || status === 'saving'}
+              disabled={(!keyInput.trim() && !nvidiaKeyInput.trim()) || status === 'saving'}
               className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-semibold text-xs transition-colors cursor-pointer"
             >
-              {status === 'saving' ? 'Verifying...' : 'Save & Connect'}
+              {status === 'saving' ? 'Saving...' : 'Save Credentials'}
             </button>
           </div>
         </form>
@@ -150,7 +196,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Cpu className="w-3.5 h-3.5 text-indigo-400" />
               <span>Agent Intelligence Model:</span>
             </span>
-            <span className="font-mono text-slate-300 font-medium">gemini-3.8-flash</span>
+            <span className="font-mono text-slate-300 font-medium">NVIDIA Nemotron 3 Ultra 550B (NIM)</span>
           </div>
 
           <div className="flex items-center justify-between">

@@ -1,8 +1,8 @@
-import { GoogleGenAI } from '@google/genai';
 import puppeteer, { Browser, Page } from 'puppeteer-core';
 import { steelClient } from './steel.ts';
 import { skillsRegistry } from './skills/registry.ts';
 import { skillVerifier } from './skills/verifier.ts';
+import { generateAgentLLM } from './llm.ts';
 import type { 
   ActiveTask, 
   AgentEvent, 
@@ -12,8 +12,6 @@ import type {
   TaskPlanItem, 
   TaskReport 
 } from '../src/types/index.ts';
-
-const ai = new GoogleGenAI();
 
 export class AgentManager {
   private tasks: Map<string, ActiveTask> = new Map();
@@ -367,13 +365,12 @@ Respond ONLY with a JSON object in this schema:
   }
 }`;
 
-      const skillRes = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: skillSelectionPrompt,
-        config: { responseMimeType: 'application/json' },
+      const skillText = await generateAgentLLM({
+        prompt: skillSelectionPrompt,
+        jsonResponse: true,
       });
 
-      const parsedSelection = JSON.parse(skillRes.text || '{}');
+      const parsedSelection = JSON.parse(skillText || '{}');
       const chosenIds: string[] = Array.isArray(parsedSelection.selectedSkillIds) ? parsedSelection.selectedSkillIds : [];
       
       selectedSkills = activeSkillsList.filter(s => chosenIds.includes(s.id));
@@ -464,13 +461,12 @@ Respond ONLY with a JSON object:
   "recommendedMaxSteps": number
 }`;
 
-      const planRes = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: planPrompt,
-        config: { responseMimeType: 'application/json' },
+      const planText = await generateAgentLLM({
+        prompt: planPrompt,
+        jsonResponse: true,
       });
 
-      const parsedPlan = JSON.parse(planRes.text || '{}');
+      const parsedPlan = JSON.parse(planText || '{}');
       if (Array.isArray(parsedPlan.plan) && parsedPlan.plan.length > 0) {
         task.plan = parsedPlan.plan.map((p: any, idx: number) => ({
           id: p.id || idx + 1,
@@ -743,16 +739,13 @@ Respond ONLY with a JSON object in this exact schema:
       };
 
       try {
-        const geminiRes = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-          },
+        const text = await generateAgentLLM({
+          prompt,
+          systemInstruction: 'You are an elite autonomous browser agent powered by Steel cloud browser infrastructure. Respond ONLY with a valid JSON object matching the requested schema.',
+          jsonResponse: true,
         });
 
-        const text = geminiRes.text || '{}';
-        decision = JSON.parse(text);
+        decision = JSON.parse(text || '{}');
 
         // Update task plan progress if provided
         if (decision.currentMilestoneId && task.plan) {
@@ -1206,11 +1199,11 @@ Provide a comprehensive, high-quality Markdown summary of what was accomplished 
 
       let summaryText = 'Autonomous task execution finished.';
       try {
-        const synRes = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: synthesisPrompt,
-        });
-        summaryText = synRes.text || summaryText;
+        summaryText = await generateAgentLLM({
+          prompt: synthesisPrompt,
+          systemInstruction: 'You are an elite AI synthesis engine. Summarize the browser session findings clearly in Markdown.',
+          jsonResponse: false,
+        }) || summaryText;
       } catch (err) {
         console.warn('Synthesis error:', err);
       }
