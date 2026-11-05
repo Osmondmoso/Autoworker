@@ -1,0 +1,9 @@
+{
+  "appId": "com.yooohw.autoworker",
+  "appName": "Autoworker",
+  "webDir": "dist",
+  "server": {
+    "url": "https://autoworker.ai.studio/",
+    "cleartext": false
+  }
+}
