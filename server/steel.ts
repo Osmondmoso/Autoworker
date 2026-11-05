@@ -38,7 +38,7 @@ export class SteelClient {
 
   async createSession(options?: CreateSessionOptions) {
     const body = {
-      sessionTimeout: options?.sessionTimeout || 300000,
+      sessionTimeout: options?.sessionTimeout || 600000, // 10 minutes
       dimensions: options?.dimensions || { width: 1280, height: 800 },
       debugConfig: {
         interactive: options?.debugConfig?.interactive !== false,

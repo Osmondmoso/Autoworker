@@ -1,26 +1,21 @@
 <!doctype html>
-<html lang="en" class="dark bg-slate-950">
+<html lang="en" class="w-full h-full">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Steel Agent Studio - Autonomous Live Browser Agent</title>
     <meta name="description" content="Autonomous browser AI agent powered by Steel and Gemini. Watch real-time execution in interactive cloud browser sessions with live DOM observation, step-by-step reasoning, and visual logs." />
     <meta property="og:title" content="Steel Agent Studio - Autonomous Live Browser Agent" />
     <meta property="og:description" content="Autonomous browser AI agent powered by Steel and Gemini. Watch real-time execution in interactive cloud browser sessions with live DOM observation, step-by-step reasoning, and visual logs." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <style>
-      html, body {
-        background-color: #020617;
-        color: #f8fafc;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-      }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
   </head>
-  <body class="bg-slate-950 text-slate-100 min-h-screen">
-    <div id="root"></div>
+  <body class="w-full h-full m-0 p-0 overflow-hidden bg-neutral-100 md:bg-neutral-200 flex justify-center items-stretch md:items-center font-sans antialiased">
+    <div id="root" class="w-full h-full flex justify-center items-stretch md:items-center"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

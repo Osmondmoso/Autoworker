@@ -175,6 +175,7 @@ export interface SteelSession {
 export interface AgentEvent {
   type: 
     | 'task_created'
+    | 'task_snapshot'
     | 'session_ready'
     | 'skills_selected'
     | 'skill_activated'
@@ -199,3 +200,43 @@ export interface AgentEvent {
   payload: any;
 }
 
+export type StructuredStatus = 'Completed' | 'Failed' | 'Needs Attention' | 'Running' | 'Paused';
+
+export interface TaskStructuredResult {
+  status: StructuredStatus;
+  whatIDid: string;
+  whatIFound: string;
+  whatRemains: string;
+  nextAction: string;
+  technicalDetails?: string;
+  errorType?: string;
+  actionableOption?: {
+    label: string;
+    action: 'retry' | 'continue' | 'open_browser' | 'stop';
+  };
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'agent' | 'system';
+  text: string;
+  timestamp: string;
+  taskId?: string;
+  sessionId?: string;
+  structuredResult?: TaskStructuredResult;
+  screenshot?: string;
+  error?: string;
+  isStreaming?: boolean;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  activeTaskId?: string;
+  activeSessionId?: string;
+  lastGoal?: string;
+  currentUrl?: string;
+  messages: ChatMessage[];
+}

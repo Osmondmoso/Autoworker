@@ -6,6 +6,7 @@ import { steelClient } from './server/steel.ts';
 import { agentManager } from './server/agent.ts';
 import { skillsRegistry } from './server/skills/registry.ts';
 import { getNvidiaApiKey, setNvidiaApiKey } from './server/llm.ts';
+import { conversationManager } from './server/conversations.ts';
 
 dotenv.config();
 
@@ -228,6 +229,49 @@ app.post('/api/agent/approval/:taskId', (req, res) => {
     const { approved } = req.body;
     const ok = agentManager.resolveApproval(req.params.taskId, !!approved);
     res.json({ success: ok });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Conversation Management Endpoints
+app.get('/api/conversations', (_req, res) => {
+  res.json(conversationManager.getAll());
+});
+
+app.get('/api/conversations/active', (_req, res) => {
+  res.json(conversationManager.getOrCreateDefault());
+});
+
+app.post('/api/conversations', (req, res) => {
+  const { title } = req.body;
+  const conv = conversationManager.createConversation(title);
+  res.json(conv);
+});
+
+app.get('/api/conversations/:id', (req, res) => {
+  const conv = conversationManager.get(req.params.id);
+  if (!conv) {
+    return res.status(404).json({ error: 'Conversation not found' });
+  }
+  res.json(conv);
+});
+
+app.delete('/api/conversations/:id', (req, res) => {
+  const success = conversationManager.deleteConversation(req.params.id);
+  res.json({ success });
+});
+
+app.post('/api/conversations/:id/messages', async (req, res) => {
+  const { message } = req.body;
+  if (!message || typeof message !== 'string') {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+
+  try {
+    const resultMsg = await conversationManager.processUserMessage(req.params.id, message);
+    const updatedConv = conversationManager.get(req.params.id);
+    res.json({ message: resultMsg, conversation: updatedConv });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

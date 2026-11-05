@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import puppeteer, { Browser, Page } from 'puppeteer-core';
 import { steelClient } from './steel.ts';
 import { skillsRegistry } from './skills/registry.ts';
@@ -13,11 +15,69 @@ import type {
   TaskReport 
 } from '../src/types/index.ts';
 
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
+
 export class AgentManager {
   private tasks: Map<string, ActiveTask> = new Map();
   private eventListeners: Map<string, Set<(event: AgentEvent) => void>> = new Map();
   private activeBrowsers: Map<string, Browser> = new Map();
   private pendingApprovals: Map<string, (approved: boolean) => void> = new Map();
+
+  constructor() {
+    this.ensureDataDir();
+    this.loadTasksFromDisk();
+  }
+
+  private ensureDataDir() {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+    } catch (err) {
+      console.warn('Failed to create data directory for tasks:', err);
+    }
+  }
+
+  private loadTasksFromDisk() {
+    try {
+      if (fs.existsSync(TASKS_FILE)) {
+        const raw = fs.readFileSync(TASKS_FILE, 'utf-8');
+        const list: ActiveTask[] = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          list.forEach((t) => {
+            // If server restarted while task was in 'running' state, mark as stopped or paused
+            if (t.status === 'running' || t.status === 'planning') {
+              t.status = 'paused';
+            }
+            this.tasks.set(t.id, t);
+          });
+          console.log(`[Tasks] Loaded ${this.tasks.size} persistent tasks from disk.`);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load tasks from disk:', err);
+    }
+  }
+
+  saveTasksToDisk() {
+    try {
+      this.ensureDataDir();
+      const list = Array.from(this.tasks.values());
+      // Sanitize screenshots to keep file lightweight
+      const sanitized = list.map((t) => ({
+        ...t,
+        steps: (t.steps || []).map((s) => ({
+          ...s,
+          screenshot: undefined, // drop historical step screenshots from disk to keep under 1MB
+        })),
+        latestScreenshot: t.latestScreenshot ? (t.latestScreenshot.length > 300000 ? t.latestScreenshot.slice(0, 100) + '...' : t.latestScreenshot) : undefined,
+      }));
+      fs.writeFileSync(TASKS_FILE, JSON.stringify(sanitized, null, 2), 'utf-8');
+    } catch (err) {
+      console.warn('Failed to save tasks to disk:', err);
+    }
+  }
 
   getTask(taskId: string): ActiveTask | undefined {
     return this.tasks.get(taskId);
@@ -186,12 +246,14 @@ export class AgentManager {
     };
 
     this.tasks.set(taskId, task);
+    this.saveTasksToDisk();
 
     // Run execution asynchronously
     this.executeAutonomousLoop(task, params.existingSessionId).catch((err) => {
       console.error(`Task ${taskId} execution failed:`, err);
       task.status = 'failed';
       task.error = err.message || 'Unknown error during execution';
+      this.saveTasksToDisk();
       this.emit(taskId, {
         type: 'task_failed',
         taskId,
@@ -891,6 +953,7 @@ Respond ONLY with a JSON object in this exact schema:
           };
           task.report = report;
           task.status = 'completed';
+          this.saveTasksToDisk();
 
           this.emit(task.id, {
             type: 'step_complete',
@@ -1186,22 +1249,33 @@ Respond ONLY with a JSON object in this exact schema:
     // If loop finished (either reached max steps or closed) without explicit finish
     if (task.status === 'running') {
       task.status = 'completed';
-      const synthesisPrompt = `Synthesize the findings from this autonomous browser session:
+      const synthesisPrompt = `You are an elite autonomous agent synthesis engine at the level of OpenAI Operator and Claude Pro.
+Synthesize the final report for this autonomous browser task:
 Goal: "${task.goal}"
 Coordinated Skills: ${selectedSkills.map(s => s.name).join(', ')}
-Steps taken:
-${executionHistory.join('\n')}
-Current URL: ${task.currentUrl || 'about:blank'}
+Total Steps: ${currentStepNum}
+Final URL: ${task.currentUrl || 'about:blank'}
 Title: ${task.currentTitle || ''}
-Extracted Data Points: ${extractedItems.length}
+Execution History:
+${executionHistory.join('\n')}
 
-Provide a comprehensive, high-quality Markdown summary of what was accomplished and found, referencing the skill procedures and verification evidence.`;
+Extracted Data Points: ${extractedItems.length}
+${extractedItems.length > 0 ? JSON.stringify(extractedItems, null, 2) : 'None'}
+
+CRITICAL GUIDELINES:
+1. ACCURACY & HONESTY: Never claim success based only on clicks or form submissions. If MFA/2FA, CAPTCHA, or authentication challenge stopped the task before reaching the final verified objective, explicitly state that the goal was blocked or incomplete.
+2. STRUCTURE: Use clean, professional Markdown formatted with clear sections:
+   - ## Executive Summary (1-2 clear sentences on what occurred and actual outcome)
+   - ## Key Findings & Observations (bulleted facts, extracted values, or barriers detected)
+   - ## Objective Status (Explicitly: **Completed** | **Blocked / Incomplete** | **Needs Human Verification**)
+   - ## Recommended Next Step (Actionable next step for the user or agent)
+3. TYPOGRAPHY: Use crisp Markdown with proper headers, bold highlights, and backticks for identifiers or URLs.`;
 
       let summaryText = 'Autonomous task execution finished.';
       try {
         summaryText = await generateAgentLLM({
           prompt: synthesisPrompt,
-          systemInstruction: 'You are an elite AI synthesis engine. Summarize the browser session findings clearly in Markdown.',
+          systemInstruction: 'You are an elite AI synthesis engine at the level of OpenAI Operator and Claude Pro. Summarize the browser session findings clearly and objectively in structured Markdown.',
           jsonResponse: false,
         }) || summaryText;
       } catch (err) {
@@ -1222,6 +1296,8 @@ Provide a comprehensive, high-quality Markdown summary of what was accomplished 
         verificationsPassed,
         verificationsTotal,
       };
+
+      this.saveTasksToDisk();
 
       this.emit(task.id, {
         type: 'task_completed',
