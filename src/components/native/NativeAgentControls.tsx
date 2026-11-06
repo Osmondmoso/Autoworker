@@ -52,8 +52,13 @@ export function NativeAgentControls() {
         <button disabled={busy || !enabled} onClick={() => run(async () => {
           const result = await AutoWorkerNative.readVisibleText();
           setScreenText(result.text || '(No accessible text on this screen)');
-          setMessage('Screen read complete.');
+          setMessage('Current screen read complete.');
         })} className="rounded-xl bg-slate-700 px-3 py-2 text-xs disabled:opacity-50">Read screen</button>
+        <button disabled={busy || !enabled} onClick={() => run(async () => {
+          const result = await AutoWorkerNative.readLastExternalScreen();
+          setScreenText(result.text || '(No other app screen captured yet. Open another app, use it briefly, then return here.)');
+          setMessage(result.packageName ? `Last app captured: ${result.packageName}` : 'No external app screen captured yet.');
+        })} className="rounded-xl bg-slate-700 px-3 py-2 text-xs disabled:opacity-50">Read last app</button>
       </div>
       <div className="mt-3 flex gap-2">
         <input value={target} onChange={event => setTarget(event.target.value)} placeholder="Visible button or label"
