@@ -10,11 +10,38 @@ import java.util.List;
 
 public class AutoWorkerAccessibilityService extends AccessibilityService {
   private static WeakReference<AutoWorkerAccessibilityService> current = new WeakReference<>(null);
+  private String lastExternalText = "";
+  private String lastExternalPackage = "";
+  private long lastExternalReadAt = 0L;
+  private AccessibilityNodeInfo lastExternalRoot;
+
   public static AutoWorkerAccessibilityService getInstance() { return current.get(); }
   @Override public void onServiceConnected() { super.onServiceConnected(); current = new WeakReference<>(this); }
-  @Override public void onAccessibilityEvent(AccessibilityEvent event) { }
+
+  @Override public void onAccessibilityEvent(AccessibilityEvent event) {
+    if (event == null || event.getPackageName() == null) return;
+    String pkg = event.getPackageName().toString();
+    if (pkg.equals(getPackageName())) return;
+    AccessibilityNodeInfo root = getRootInActiveWindow();
+    if (root == null) root = event.getSource();
+    if (root == null) return;
+    List<String> lines = new ArrayList<>();
+    collectText(root, lines);
+    String text = android.text.TextUtils.join("\n", lines);
+    if (!text.trim().isEmpty()) {
+      lastExternalText = text;
+      lastExternalPackage = pkg;
+      lastExternalReadAt = System.currentTimeMillis();
+      if (lastExternalRoot != null) lastExternalRoot.recycle();
+      lastExternalRoot = AccessibilityNodeInfo.obtain(root);
+    }
+  }
   @Override public void onInterrupt() { }
-  @Override public void onDestroy() { if (current.get() == this) current.clear(); super.onDestroy(); }
+  @Override public void onDestroy() {
+    if (lastExternalRoot != null) { lastExternalRoot.recycle(); lastExternalRoot = null; }
+    if (current.get() == this) current.clear();
+    super.onDestroy();
+  }
 
   public String readVisibleText() {
     AccessibilityNodeInfo root = getRootInActiveWindow();
@@ -23,6 +50,10 @@ public class AutoWorkerAccessibilityService extends AccessibilityService {
     collectText(root, lines);
     return android.text.TextUtils.join("\n", lines);
   }
+  public String readLastExternalText() { return lastExternalText; }
+  public String getLastExternalPackage() { return lastExternalPackage; }
+  public long getLastExternalReadAt() { return lastExternalReadAt; }
+
   private void collectText(AccessibilityNodeInfo node, List<String> lines) {
     if (node == null) return;
     CharSequence text = node.getText(), desc = node.getContentDescription();
@@ -32,6 +63,7 @@ public class AutoWorkerAccessibilityService extends AccessibilityService {
   }
   public boolean clickText(String target) {
     AccessibilityNodeInfo root = getRootInActiveWindow();
+    if (root == null || getPackageName().equals(lastExternalPackage)) root = lastExternalRoot;
     return root != null && target != null && clickMatching(root, target.toLowerCase());
   }
   private boolean clickMatching(AccessibilityNodeInfo node, String target) {
@@ -50,6 +82,7 @@ public class AutoWorkerAccessibilityService extends AccessibilityService {
   }
   public boolean typeIntoFocusedField(String value) {
     AccessibilityNodeInfo root=getRootInActiveWindow();
+    if(root==null || getPackageName().equals(lastExternalPackage)) root=lastExternalRoot;
     if(root==null) return false;
     AccessibilityNodeInfo focused=root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
     if(focused==null || !focused.isEditable()) return false;
@@ -59,6 +92,7 @@ public class AutoWorkerAccessibilityService extends AccessibilityService {
   }
   public boolean scroll(String direction) {
     AccessibilityNodeInfo root=getRootInActiveWindow();
+    if(root==null || getPackageName().equals(lastExternalPackage)) root=lastExternalRoot;
     if(root==null) return false;
     int action="up".equalsIgnoreCase(direction)?AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD:AccessibilityNodeInfo.ACTION_SCROLL_FORWARD;
     return scrollFirst(root,action);
