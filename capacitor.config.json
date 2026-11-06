@@ -1,6 +1,6 @@
 {
-  "appId": "com.yooohw.autoworker",
-  "appName": "Autoworker",
+  "appId": "com.yooohw.autoworker.native",
+  "appName": "AutoWorker Native",
   "webDir": "dist",
   "android": {
     "allowMixedContent": false
