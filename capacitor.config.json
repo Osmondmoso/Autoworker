@@ -1,5 +1,5 @@
 {
-  "appId": "com.yooohw.autoworker.native",
+  "appId": "com.yooohw.autoworkerphone",
   "appName": "AutoWorker Native",
   "webDir": "dist",
   "android": {
