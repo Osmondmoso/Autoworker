@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState, useRef } from 'react';
+import { NativeAgentControls } from './components/native/NativeAgentControls';
 import { GeminiTopNav } from './components/gemini/GeminiTopNav';
 import { GeminiInputDock } from './components/gemini/GeminiInputDock';
 import { GeminiMenuDrawer } from './components/gemini/GeminiMenuDrawer';
@@ -18,6 +19,8 @@ import type {
   ChatMessage, 
   AgentStep 
 } from './types';
+
+const API_BASE = 'https://autoworker.ai.studio';
 
 export default function App() {
   // Application Data & State
@@ -56,7 +59,7 @@ export default function App() {
   // Initial Fetching
   const checkHealth = async () => {
     try {
-      const res = await fetch('/api/health');
+      const res = await fetch(`${API_BASE}/api/health');
       const data = await res.json();
       setSteelConnected(data.steelConnected);
       if (data.maskedKey) setMaskedKey(data.maskedKey);
@@ -68,7 +71,7 @@ export default function App() {
 
   const fetchConversations = async () => {
     try {
-      const res = await fetch('/api/conversations');
+      const res = await fetch(`${API_BASE}/api/conversations');
       const list = await res.json();
       if (Array.isArray(list)) {
         setConversations(list);
@@ -80,7 +83,7 @@ export default function App() {
 
   const fetchActiveConversation = async () => {
     try {
-      const res = await fetch('/api/conversations/active');
+      const res = await fetch(`${API_BASE}/api/conversations/active');
       const conv = await res.json();
       if (conv && conv.id) {
         setActiveConversation(conv);
@@ -92,7 +95,7 @@ export default function App() {
 
   const fetchRecentTasks = async () => {
     try {
-      const res = await fetch('/api/agent/tasks');
+      const res = await fetch(`${API_BASE}/api/agent/tasks');
       const tasks = await res.json();
       if (Array.isArray(tasks)) {
         setRecentTasks(tasks);
@@ -132,7 +135,7 @@ export default function App() {
       eventSourceRef.current.close();
     }
 
-    const es = new EventSource(`/api/agent/stream/${taskId}`);
+    const es = new EventSource(`${API_BASE}/api/agent/stream/${taskId}`);
     eventSourceRef.current = es;
 
     es.onmessage = (event) => {
@@ -241,7 +244,7 @@ export default function App() {
     try {
       let convId = activeConversation?.id;
       if (!convId) {
-        const createRes = await fetch('/api/conversations', {
+        const createRes = await fetch(`${API_BASE}/api/conversations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: text.slice(0, 30) }),
@@ -251,7 +254,7 @@ export default function App() {
         setActiveConversation(newConv);
       }
 
-      const res = await fetch(`/api/conversations/${convId}/messages`, {
+      const res = await fetch(`${API_BASE}/api/conversations/${convId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
@@ -268,7 +271,7 @@ export default function App() {
       }
 
       if (data.message?.taskId) {
-        const tRes = await fetch(`/api/agent/task/${data.message.taskId}`);
+        const tRes = await fetch(`${API_BASE}/api/agent/task/${data.message.taskId}`);
         if (tRes.ok) {
           const t: ActiveTask = await tRes.json();
           setActiveTask(t);
@@ -288,7 +291,7 @@ export default function App() {
   // Launch a new conversation explicitly
   const handleNewConversation = async () => {
     try {
-      const res = await fetch('/api/conversations', {
+      const res = await fetch(`${API_BASE}/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'New Conversation' }),
@@ -305,7 +308,7 @@ export default function App() {
   const handleNavigateManual = async (url: string) => {
     if (!activeTask?.sessionId) return;
     try {
-      const res = await fetch(`/api/sessions/${activeTask.sessionId}/action`, {
+      const res = await fetch(`${API_BASE}/api/sessions/${activeTask.sessionId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'navigate', url }),
@@ -325,7 +328,7 @@ export default function App() {
   const handleTakeSnapshot = async () => {
     if (!activeTask?.sessionId) return;
     try {
-      const res = await fetch(`/api/sessions/${activeTask.sessionId}/action`, {
+      const res = await fetch(`${API_BASE}/api/sessions/${activeTask.sessionId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'screenshot' }),
@@ -342,7 +345,7 @@ export default function App() {
   const handleScrollManual = async () => {
     if (!activeTask?.sessionId) return;
     try {
-      const res = await fetch(`/api/sessions/${activeTask.sessionId}/action`, {
+      const res = await fetch(`${API_BASE}/api/sessions/${activeTask.sessionId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'scroll' }),
@@ -360,7 +363,7 @@ export default function App() {
   const handleResolveApproval = async (approved: boolean) => {
     if (!activeTask?.id) return;
     try {
-      await fetch(`/api/agent/approval/${activeTask.id}`, {
+      await fetch(`${API_BASE}/api/agent/approval/${activeTask.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approved }),
@@ -389,6 +392,7 @@ export default function App() {
   return (
     <main className="relative w-full h-full md:h-[92vh] md:max-h-[920px] max-w-[430px] md:max-w-md mx-auto app-screen flex flex-col overflow-hidden shadow-2xl md:rounded-[40px]">
       {/* 1. TOP NAVIGATION BAR (Time, network, and battery removed per request so app fits fully) */}
+      <NativeAgentControls />
       <GeminiTopNav
         agentName="Gemini"
         modelName={selectedModel === 'nemotron-3-ultra' ? 'Autoworker Agent' : 'Cloud Agent'}
@@ -750,7 +754,7 @@ export default function App() {
         maxSteps={maxSteps}
         autoRelease={autoRelease}
         onUpdateSteelKey={async (key) => {
-          const res = await fetch('/api/config/key', {
+          const res = await fetch(`${API_BASE}/api/config/key', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ apiKey: key }),
@@ -762,7 +766,7 @@ export default function App() {
           return false;
         }}
         onUpdateNvidiaKey={async (key) => {
-          const res = await fetch('/api/config/nvidia-key', {
+          const res = await fetch(`${API_BASE}/api/config/nvidia-key', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ apiKey: key }),
