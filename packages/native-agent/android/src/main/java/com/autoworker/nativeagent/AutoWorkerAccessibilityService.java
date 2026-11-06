@@ -63,7 +63,7 @@ public class AutoWorkerAccessibilityService extends AccessibilityService {
   }
   public boolean clickText(String target) {
     AccessibilityNodeInfo root = getRootInActiveWindow();
-    if (root == null || getPackageName().equals(lastExternalPackage)) root = lastExternalRoot;
+    if (root == null || (root.getPackageName() != null && getPackageName().contentEquals(root.getPackageName()))) root = lastExternalRoot;
     return root != null && target != null && clickMatching(root, target.toLowerCase());
   }
   private boolean clickMatching(AccessibilityNodeInfo node, String target) {
@@ -82,7 +82,7 @@ public class AutoWorkerAccessibilityService extends AccessibilityService {
   }
   public boolean typeIntoFocusedField(String value) {
     AccessibilityNodeInfo root=getRootInActiveWindow();
-    if(root==null || getPackageName().equals(lastExternalPackage)) root=lastExternalRoot;
+    if(root==null || (root.getPackageName()!=null && getPackageName().contentEquals(root.getPackageName()))) root=lastExternalRoot;
     if(root==null) return false;
     AccessibilityNodeInfo focused=root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
     if(focused==null || !focused.isEditable()) return false;
