@@ -1,9 +1,9 @@
 {
   "name": "@autoworker/native-agent",
   "version": "1.0.0",
-  "main": "dist/plugin.cjs.js",
-  "module": "dist/esm/index.js",
-  "types": "dist/esm/index.d.ts",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "src/index.ts",
   "files": [
     "android",
     "src"
@@ -15,5 +15,11 @@
   },
   "peerDependencies": {
     "@capacitor/core": "^7.0.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
   }
 }
