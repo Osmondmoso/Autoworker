@@ -1,0 +1,19 @@
+{
+  "name": "@autoworker/native-agent",
+  "version": "1.0.0",
+  "main": "dist/plugin.cjs.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "files": [
+    "android",
+    "src"
+  ],
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": "^7.0.0"
+  }
+}
