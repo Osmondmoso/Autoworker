@@ -35,8 +35,8 @@ jobs:
       - name: Build web assets
         run: npm run build
 
-      - name: Install Capacitor
-        run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
+      - name: Install Capacitor CLI
+        run: npm install --no-save @capacitor/cli
 
       - name: Generate Android project
         run: npx cap add android
