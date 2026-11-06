@@ -33,7 +33,7 @@ public class AutoWorkerNativePlugin extends Plugin {
     if(service==null) { call.reject("Enable AutoWorker Phone Control in Android Accessibility settings first"); return; }
     JSObject result=new JSObject(); result.put("text",service.readVisibleText()); call.resolve(result);
   }
-  @PluginMethod public void clickText(PluginCall call) {
+  @PluginMethod public void readLastExternalScreen(PluginCall call) {\n    AutoWorkerAccessibilityService service=AutoWorkerAccessibilityService.getInstance();\n    if(service==null) { call.reject("Accessibility service is not enabled"); return; }\n    JSObject result=new JSObject();\n    result.put("text",service.readLastExternalText());\n    result.put("packageName",service.getLastExternalPackage());\n    result.put("capturedAt",service.getLastExternalReadAt());\n    call.resolve(result);\n  }\n  @PluginMethod public void clickText(PluginCall call) {
     AutoWorkerAccessibilityService service=AutoWorkerAccessibilityService.getInstance();
     if(service==null) { call.reject("Accessibility service is not enabled"); return; }
     JSObject result=new JSObject(); result.put("clicked",service.clickText(call.getString("text"))); call.resolve(result);
