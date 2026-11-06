@@ -59,7 +59,7 @@ export default function App() {
   // Initial Fetching
   const checkHealth = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/health');
+      const res = await fetch(`${API_BASE}/api/health`);
       const data = await res.json();
       setSteelConnected(data.steelConnected);
       if (data.maskedKey) setMaskedKey(data.maskedKey);
@@ -71,7 +71,7 @@ export default function App() {
 
   const fetchConversations = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/conversations');
+      const res = await fetch(`${API_BASE}/api/conversations`);
       const list = await res.json();
       if (Array.isArray(list)) {
         setConversations(list);
@@ -83,7 +83,7 @@ export default function App() {
 
   const fetchActiveConversation = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/conversations/active');
+      const res = await fetch(`${API_BASE}/api/conversations/active`);
       const conv = await res.json();
       if (conv && conv.id) {
         setActiveConversation(conv);
@@ -95,7 +95,7 @@ export default function App() {
 
   const fetchRecentTasks = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/agent/tasks');
+      const res = await fetch(`${API_BASE}/api/agent/tasks`);
       const tasks = await res.json();
       if (Array.isArray(tasks)) {
         setRecentTasks(tasks);
@@ -244,7 +244,7 @@ export default function App() {
     try {
       let convId = activeConversation?.id;
       if (!convId) {
-        const createRes = await fetch(`${API_BASE}/api/conversations', {
+        const createRes = await fetch(`${API_BASE}/api/conversations`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title: text.slice(0, 30) }),
@@ -291,7 +291,7 @@ export default function App() {
   // Launch a new conversation explicitly
   const handleNewConversation = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/conversations', {
+      const res = await fetch(`${API_BASE}/api/conversations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'New Conversation' }),
@@ -754,7 +754,7 @@ export default function App() {
         maxSteps={maxSteps}
         autoRelease={autoRelease}
         onUpdateSteelKey={async (key) => {
-          const res = await fetch(`${API_BASE}/api/config/key', {
+          const res = await fetch(`${API_BASE}/api/config/key`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ apiKey: key }),
@@ -766,7 +766,7 @@ export default function App() {
           return false;
         }}
         onUpdateNvidiaKey={async (key) => {
-          const res = await fetch(`${API_BASE}/api/config/nvidia-key', {
+          const res = await fetch(`${API_BASE}/api/config/nvidia-key`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ apiKey: key }),
